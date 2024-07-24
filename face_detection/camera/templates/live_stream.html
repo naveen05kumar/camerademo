@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Stream</title>
+</head>
+<body>
+    <h1>Live Stream</h1>
+    <img id="video-feed" src="" alt="Live Stream">
+    <div id="detected-faces"></div>
+    <button id="view-detected-faces">View Detected Faces</button>
+
+    <script>
+        const videoFeed = document.getElementById('video-feed');
+        const detectedFaces = document.getElementById('detected-faces');
+        const ws = new WebSocket(`ws://${window.location.host}/ws/camera/{{ stream_id }}/`);
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+
+            // Update video frame
+            videoFeed.src = 'data:image/jpeg;base64,' + data.frame;
+
+            // Update detected faces
+            detectedFaces.innerHTML = '';
+            data.detected_faces.forEach(face => {
+                const faceDiv = document.createElement('div');
+                faceDiv.textContent = `Name: ${face.name}`;
+                detectedFaces.appendChild(faceDiv);
+            });
+        };
+
+        document.getElementById('view-detected-faces').addEventListener('click', function() {
+            window.location.href = '/camera/detected/';
+        });
+    </script>
+</body>
+</html>

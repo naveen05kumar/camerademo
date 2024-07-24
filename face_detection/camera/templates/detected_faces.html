@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detected Faces</title>
+    <style>
+        .face-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .face-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .face-image {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detected Faces</h1>
+    <div id="detected-faces" class="face-grid">
+        {% for face in faces %}
+        <div class="face-card">
+            <img src="{{ face.image.url }}" alt="{{ face.name }}" class="face-image">
+            <h3>{{ face.name }}</h3>
+            <p>Detected at: {{ face.created_at }}</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="face_id" value="{{ face.id }}">
+                <input type="text" name="new_name" placeholder="New name">
+                <button type="submit">Rename</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // WebSocket connection setup
+        var socket = new WebSocket('ws://' + window.location.host + '/ws/camera/{{ stream_id }}/');
+
+        socket.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            var detectedFacesDiv = document.getElementById('detected-faces');
+            
+            // Only update if there are new detected faces
+            if (data.detected_faces && data.detected_faces.length > 0) {
+                detectedFacesDiv.innerHTML = ''; // Clear previous faces
+                data.detected_faces.forEach(function(face) {
+                    var faceCard = document.createElement('div');
+                    faceCard.className = 'face-card';
+
+                    var faceImg = document.createElement('img');
+                    faceImg.src = 'data:image/jpeg;base64,' + face.image;
+                    faceImg.alt = face.name;
+                    faceImg.className = 'face-image';
+
+                    var nameHeader = document.createElement('h3');
+                    nameHeader.textContent = face.name;
+
+                    var detectionTime = document.createElement('p');
+                    detectionTime.textContent = 'Detected at: ' + new Date().toLocaleString();
+
+                    faceCard.appendChild(faceImg);
+                    faceCard.appendChild(nameHeader);
+                    faceCard.appendChild(detectionTime);
+
+                    detectedFacesDiv.appendChild(faceCard);
+                });
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error('WebSocket closed unexpectedly');
+        };
+    </script>
+</body>
+</html>
